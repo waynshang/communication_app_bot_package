@@ -11,7 +11,6 @@ GET_UPDATE = 'getUpdates'
 SEND_MESSAGE = 'sendMessage'
 class Telegram:
     def __init__(self, session_filename, id, hash, bot_token = None):
-      # token = '1632387033:AAEgUxJiAwZBRVXwVpocXohQOxZYFhkkR6g'
       super(type(self).__name__)
       self.bot_url = f"{TELEGRAM_API}{bot_token}/"
       self.connection = self.init_db
