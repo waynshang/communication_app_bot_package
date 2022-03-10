@@ -4,90 +4,136 @@ import datetime
 import logging
 import sqlite3
 import asyncio
-from utils import get_object_by_keys 
+from communicationApp.utils import get_object_by_keys 
+from communicationApp.communicationApp import CommunicationApp
+import os
 
 TELEGRAM_API = "https://api.telegram.org/bot"
 GET_UPDATE = 'getUpdates'
 SEND_MESSAGE = 'sendMessage'
-class Telegram:
-    def __init__(self, session_filename, id, hash, bot_token = None):
-      super(type(self).__name__)
-      self.bot_url = f"{TELEGRAM_API}{bot_token}/"
-      self.connection = self.init_db
-      self.cursor = self.connection.cursor()
-      self._create_table
+class Telegram(CommunicationApp):
+  def __init__(self, bot_token, db_name = 'db/telegram.db', log_file_name = f"log/{datetime.date.today().strftime('%Y-%m-%d')}.log"):
+    super().__init__(type(self).__name__)
+    self.bot_token = bot_token
+    self.bot_url = f"{TELEGRAM_API}{bot_token}/"
+    self.db_name = db_name
+    self.log_file_name = log_file_name
+    self._create_folder(os.path.dirname(log_file_name))
+    # db
+    self._create_folder(os.path.dirname(db_name))
+    self.connection = self.init_db()
+    self.cursor = self.connection.cursor()
+    self._create_table()
+    self.chat_id = self._get_chat_id()
+    
 
-    def init_db(self):
-      connection = sqlite3.connect("telegram.db")
-      return connection
+  def _create_folder(self, directory_name):
+    try:
+      os.stat(directory_name)
+    except:
+      os.mkdir(directory_name)
 
-    async def send_message(self, text):
-      try:
-        self._get_chat_id()
-        if type(text) == list:
-          for t in text:
-              self.send_message(self.chat_id, t)
-        else:
-          params = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML'}
-          method = SEND_MESSAGE
-          resp = await requests.post(self.api_url + method, params)
-      except Exception as Argument:
-        filename = datetime.date.today().strftime("%Y-%m-%d")
-        logging.basicConfig(filename=f'{filename}.log', encoding='utf-8', level=logging.DEBUG)
-        logging.error("send_message exception", exc_info=True)
-      return resp
-
-    def get_response(self):
-      get_result = self._get_all_responses()
-
-      if len(get_result) > 0:
-          last_update = get_result[0]
+  def init_db(self):
+    connection = sqlite3.connect(self.db_name)
+    return connection
+  
+  def send_message(self, text):
+    try:
+      print("chat_id----------", self.chat_id)
+      result = {}
+      if self.chat_id is None: return {"status_code": 400, "error": "Please send a message to bot"}
+      if type(text) == list:
+        result["status_code"] = 200
+        result["data"] = []
+        for t in text:
+          message_result = self._send_message(self.chat_id, t)
+          if message_result["status_code"] == 200: 
+            result["data"] = result["data"] + message_result["data"]
+          else:
+            return {**result, **message_result}
       else:
-          last_update = None
+        
+        params = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML'}
+        method = SEND_MESSAGE
+        response = requests.post(self.bot_url + method, params)
+        result = self._handle_request(response)
+    except Exception as Argument:
 
-      return last_update
+      logging.basicConfig(filename=self.log_file_name, level=logging.DEBUG)
+      logging.error("send_message exception", exc_info=True)
+      result= {"status_code": 404, "error": Argument}
+    return result
 
-    async def _get_all_responses(self, offset=0, timeout=30):
-      result_json = []
-      try:
-        method = GET_UPDATE
-        params = {'timeout': timeout, 'offset': offset}
-        resp = await requests.get(self.api_url + method, params)
-        result_json = resp.json()['result']
-      except Exception as Argument:
-        filename = datetime.date.today().strftime("%Y-%m-%d")
-        logging.basicConfig(filename=f'{filename}.log', encoding='utf-8', level=logging.DEBUG)
-        logging.error("get_all_responses exception", exc_info=True)
+  def get_response(self):
+    get_result =  self._get_all_responses()
+    last_update = None
 
-      return result_json
+    if len(get_result) > 0:
+      last_update = get_result[-1]
+      return get_object_by_keys(last_update, ["message", "text"])
 
-    def _get_chat_id(self):
-      if self.chat_id: return self.chat_id
-      if self._select_chat_id: 
-        self.chat_id =self._select_chat_id
-        return self.chat_id
-      else: 
-        loop = asyncio.get_event_loop() #建立一個Event Loop
-        results = loop.run_until_complete(self._get_all_responses)
-        if results: 
-          chat_id= get_object_by_keys(results[0], ["message", "chat", "id"])
-          if chat_id: self.chat_id = chat_id
-        return self.chat_id
+    return last_update
 
-    def _create_table(self):
-      self.cursor.execute("CREATE TABLE IF NOT EXISTS telegram_chat_infos (chat_id INTEGER NOT NULL PRIMARY KEY, bot_token TEXT NOT NULL, first_name VARCHAR, last_name VARCHAR)")
+  def _get_all_responses(self, offset=0, timeout=10):
+    result_json = []
+    try:
+      method = GET_UPDATE
+      params = {'timeout': timeout, 'offset': offset}
+      resp = requests.get(self.bot_url + method, params)
+      result_json = resp.json()['result']
+    except Exception as Argument:
+      logging.basicConfig(filename=self.log_file_name, encoding='utf-8', level=logging.DEBUG)
+      logging.error("get_all_responses exception", exc_info=True)
 
-    def _insert_chat_id(self, chat_id):
-      self.cursor.execute(f"INSERT OR IGNORE INTO telegram_chat_infos (chat_id, bot_token) VALUES ({chat_id}, {self.bot_token})")
+    return result_json
 
-    def _update_chat_user_info(self, first_name, last_name, chat_id):
-      self.cursor.execute(f"UPDATE telegram_chat_infos SET first_name = {first_name}, last_name= {last_name} WHERE chat_id = {chat_id}")
+  def _get_chat_id(self):
+    # if self.chat_id: return self.chat_id
+    select_result = self._select_chat_id()
+    chat_id = None
+    if select_result: 
+      return select_result
+    else: 
+      results = self._get_all_responses()
+      if results: 
+        chat_id = get_object_by_keys(results[0], ["message", "chat", "id"])
+        if chat_id: 
+          first_name = get_object_by_keys(results[0], ["message", "chat", "id"])
+          last_name = get_object_by_keys(results[0], ["message", "chat", "id"])
+          self._insert_chat_id(chat_id)
+          self._update_chat_user_info(first_name, last_name, chat_id)
 
-    def _select_chat_id(self):
-      rows = self.cursor.execute(f"SELECT chat_id from telegram_chat_infos where bot_token = {self.bot_token}").fetchall()
-      row = rows[0]
-      if row: return list(row)[0]
-      return None
+      return chat_id
+
+  def _create_table(self):
+    self.cursor.execute("CREATE TABLE IF NOT EXISTS telegram_chat_infos (chat_id INTEGER NOT NULL PRIMARY KEY, bot_token TEXT NOT NULL, first_name VARCHAR, last_name VARCHAR)")
+    self.connection.commit()
+
+  def _insert_chat_id(self, chat_id):
+    self.cursor.execute(f"INSERT OR IGNORE INTO telegram_chat_infos (chat_id, bot_token) VALUES ({chat_id}, '{self.bot_token}')")
+    self.connection.commit()
+
+  def _update_chat_user_info(self, first_name, last_name, chat_id):
+    self.cursor.execute(f"UPDATE telegram_chat_infos SET first_name = '{first_name}', last_name= '{last_name}' WHERE chat_id = {chat_id}")
+    self.connection.commit()  
+
+  def _select_chat_id(self):
+    rows = self.cursor.execute(f"SELECT chat_id from telegram_chat_infos where bot_token = '{self.bot_token}'").fetchall()
+    if not rows: return None
+    row = rows[0]
+    if row: return list(row)[0]
+    return None
+
+  def _handle_request(self, response):
+    if not response: return {"status_code": 404, "error": "missing response"}
+    response = response.json()
+    if not response["ok"]: return {"status_code": response["error_code"], "error": response["description"]}
+
+    return {
+      "status_code": 200,
+      "data": [response["result"]]
+    }
+
 
 
 
