@@ -13,6 +13,8 @@ GET_UPDATE = 'getUpdates'
 SEND_MESSAGE = 'sendMessage'
 DEFAULT_DB = 'db/telegram.db'
 DEFAULT_LOG_FILE = f"log/{datetime.date.today().strftime('%Y-%m-%d')}.log"
+# 400 user error
+# 404 exception
 class Telegram(CommunicationApp):
   def __init__(self, **kwargs):
     bot_token = get_object_by_keys(kwargs, 'bot_token')
@@ -73,23 +75,26 @@ class Telegram(CommunicationApp):
   def get_response(self, limit: int = 1):
     try:
       get_result =  self._get_all_responses()
-      result = {"status_code": 400, "error": "Not found response"}
-
+      result = self._handle_request(get_result)
+      if result.get("status_code") is not 200: return result
       if len(get_result) > 0:
         data = []
         if limit < 1: raise ValueError
         limit = min(len(get_result), limit)
-        start_index = -1 * limit
-        for i in range(limit):
-          index  = start_index + i
-          last_update = get_result[index]
-          response_text = get_object_by_keys(last_update, ["message", "text"])
-          response_user_info = get_object_by_keys(last_update, ["message", "from"])
-          data.append({'response':{
-            'text': response_text,
-            'user_info': response_user_info
-          }})
-        result = {"status_code": 404, 'data':data} 
+        # start_index = -1 * limit
+        # for i in range(limit):
+        #   index  = start_index + i
+        #   last_update = get_result[index]
+        #   response_text = get_object_by_keys(last_update, ["message", "text"])
+        #   response_user_info = get_object_by_keys(last_update, ["message", "from"])
+        #   data.append({'response':{
+        #     'text': response_text,
+        #     'user_info': response_user_info
+        #   }})
+        start_index = len(get_result) - limit
+        result['data'] = (result.get('data') or [])[start_index:]
+      else:
+        result = {"status_code": 400, "error": "Not found response"}
     except ValueError:
       result= {"status_code": 404, "error": "Please enter number over 0"}
     except Exception as Argument:
@@ -104,7 +109,7 @@ class Telegram(CommunicationApp):
       method = GET_UPDATE
       params = {'timeout': timeout, 'offset': offset}
       resp = requests.get(self.bot_url + method, params)
-      result_json = resp.json()['result']
+      result_json = get_object_by_keys(resp.json(),'result')
     except Exception as Argument:
       logging.basicConfig(filename=self.log_file_name, encoding='utf-8', level=logging.DEBUG)
       logging.error("get_all_responses exception", exc_info=True)
@@ -151,11 +156,11 @@ class Telegram(CommunicationApp):
   def _handle_request(self, response):
     if not response: return {"status_code": 404, "error": "missing response"}
     response = response.json()
-    if not response["ok"]: return {"status_code": response["error_code"], "error": response["description"]}
+    if not get_object_by_keys(response,'ok'): return {"status_code": response["error_code"], "error": response["description"]}
 
     return {
       "status_code": 200,
-      "data": [response["result"]]
+      "data": [get_object_by_keys(response,'result')]
     }
 
 
