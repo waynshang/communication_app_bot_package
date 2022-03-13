@@ -52,7 +52,7 @@ class Telegram(CommunicationApp):
         result["status_code"] = 200
         result["data"] = []
         for t in text:
-          message_result = self._send_message(self.chat_id, t)
+          message_result = self.send_message(t)
           if message_result["status_code"] == 200: 
             result["data"] = result["data"] + message_result["data"]
           else:
@@ -96,7 +96,6 @@ class Telegram(CommunicationApp):
       logging.basicConfig(filename=self.log_file_name, level=logging.DEBUG)
       logging.error("send_message exception", exc_info=True)
       result= {"status_code": 404, "error": Argument}
-
     return result
 
   def _get_all_responses(self, offset=0, timeout=10):
