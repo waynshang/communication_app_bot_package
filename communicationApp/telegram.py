@@ -70,15 +70,34 @@ class Telegram(CommunicationApp):
       result= {"status_code": 404, "error": Argument}
     return result
 
-  def get_response(self):
-    get_result =  self._get_all_responses()
-    last_update = None
+  def get_response(self, limit: int = 1):
+    try:
+      get_result =  self._get_all_responses()
+      result = {"status_code": 400, "error": "Not found response"}
 
-    if len(get_result) > 0:
-      last_update = get_result[-1]
-      return get_object_by_keys(last_update, ["message", "text"])
+      if len(get_result) > 0:
+        data = []
+        if limit < 1: raise ValueError
+        limit = min(len(get_result), limit)
+        start_index = -1 * limit
+        for i in range(limit):
+          index  = start_index + i
+          last_update = get_result[index]
+          response_text = get_object_by_keys(last_update, ["message", "text"])
+          response_user_info = get_object_by_keys(last_update, ["message", "from"])
+          data.append({'response':{
+            'text': response_text,
+            'user_info': response_user_info
+          }})
+        result = {"status_code": 404, 'data':data} 
+    except ValueError:
+      result= {"status_code": 404, "error": "Please enter number over 0"}
+    except Exception as Argument:
+      logging.basicConfig(filename=self.log_file_name, level=logging.DEBUG)
+      logging.error("send_message exception", exc_info=True)
+      result= {"status_code": 404, "error": Argument}
 
-    return last_update
+    return result
 
   def _get_all_responses(self, offset=0, timeout=10):
     result_json = []
