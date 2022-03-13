@@ -157,10 +157,18 @@ class Telegram(CommunicationApp):
     if not response: return {"status_code": 404, "error": "missing response"}
     response = response.json()
     if not get_object_by_keys(response,'ok'): return {"status_code": response["error_code"], "error": response["description"]}
+    result = get_object_by_keys(response,'result')
+    user_info = get_object_by_keys(result,['message', 'from'])
+    date = user_info = result.get('date')
+    text = user_info = result.get('text')
 
     return {
       "status_code": 200,
-      "data": [get_object_by_keys(response,'result')]
+      "data": [{
+          user_info: user_info,
+          date: date,
+          text: text,
+        }]
     }
 
 
