@@ -11,8 +11,14 @@ import os
 TELEGRAM_API = "https://api.telegram.org/bot"
 GET_UPDATE = 'getUpdates'
 SEND_MESSAGE = 'sendMessage'
+DEFAULT_DB = 'db/telegram.db'
+DEFAULT_LOG_FILE = f"log/{datetime.date.today().strftime('%Y-%m-%d')}.log"
 class Telegram(CommunicationApp):
-  def __init__(self, bot_token, db_name = 'db/telegram.db', log_file_name = f"log/{datetime.date.today().strftime('%Y-%m-%d')}.log"):
+  def __init__(self, **kwargs):
+    bot_token = get_object_by_keys(kwargs, 'bot_token')
+    db_name = get_object_by_keys(kwargs, 'db_name') or DEFAULT_DB
+    log_file_name = get_object_by_keys(kwargs, 'log_file_name') or DEFAULT_LOG_FILE
+
     super().__init__(type(self).__name__)
     self.bot_token = bot_token
     self.bot_url = f"{TELEGRAM_API}{bot_token}/"

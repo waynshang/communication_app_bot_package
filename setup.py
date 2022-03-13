@@ -37,5 +37,5 @@ setup(
   classifier=classifier,
   keywords='Communication App',
   packages=find_packages(),
-  install_requires=['telethon']
+  install_requires=['']
 )
