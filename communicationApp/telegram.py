@@ -11,6 +11,7 @@ import os
 TELEGRAM_API = "https://api.telegram.org/bot"
 GET_UPDATE = 'getUpdates'
 SEND_MESSAGE = 'sendMessage'
+SEND_PHOTO= 'sendPhoto'
 DEFAULT_DB = 'db/telegram.db'
 DEFAULT_LOG_FILE = f"log/{datetime.date.today().strftime('%Y-%m-%d')}.log"
 # 400 user error
@@ -47,7 +48,7 @@ class Telegram(CommunicationApp):
   
   def send_message(self, text):
     try:
-      print("chat_id----------", self.chat_id)
+      # print("chat_id----------", self.chat_id)
       result = {}
       if self.chat_id is None: return {"status_code": 400, "error": "Please send a message to bot"}
       if type(text) == list:
@@ -65,6 +66,26 @@ class Telegram(CommunicationApp):
         method = SEND_MESSAGE
         response = requests.post(self.bot_url + method, params)
         result = self._handle_request(response)
+    except Exception as Argument:
+
+      logging.basicConfig(filename=self.log_file_name, level=logging.DEBUG)
+      logging.error("send_message exception", exc_info=True)
+      result= {"status_code": 404, "error": Argument}
+    return result
+
+  def send_photo(self, image_url = None, file_id = None, file= None):
+    try:
+      # print("chat_id----------", self.chat_id)
+      result = {}
+      if self.chat_id is None: return {"status_code": 400, "error": "Please send a message to bot"}
+      photo = image_url
+      if not photo: photo = file_id
+      if not photo: photo = file 
+
+      params = {'chat_id': self.chat_id, 'photo': photo, 'parse_mode': 'HTML'}
+      method = SEND_PHOTO
+      response = requests.post(self.bot_url + method, params)
+      result = self._handle_request(response)
     except Exception as Argument:
 
       logging.basicConfig(filename=self.log_file_name, level=logging.DEBUG)
