@@ -4,3 +4,7 @@ Change Log
 0.1 (06/03/2022)
 -------------------
 - First Release
+
+0.2 (10/04/2022)
+-------------------
+- add send photo feature

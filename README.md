@@ -21,7 +21,7 @@ pip3 install communicationAppModule
 # bot token only for telegram
 # db_name optional
 # log_file_name optional
-
+from communicationApp import *
 client = createClient('Telegram', bot_token ='', db_name ='', log_file_name='')
 ```
 
@@ -32,6 +32,21 @@ client.send_message("hi")
 
 # send multi line
 client.send_message(['hi','John', 'this is wayne'])
+```
+
+
+### Send Photo
+```py
+# send photo from url
+client.send_photo({'photo_url': photo_url})
+
+# send photo from telegram file id
+client.send_photo({'file_id': file_id})
+
+#send photo from file
+file = open('path', 'rb')
+client.send_photo({'file': file})
+
 ```
 
 ### Get message

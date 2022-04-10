@@ -73,11 +73,13 @@ class Telegram(CommunicationApp):
       result= {"status_code": 404, "error": Argument}
     return result
 
-  def send_photo(self, image_url = None, file_id = None, file= None):
+  def send_photo(self, image_url: None, file_id: None, file: None):
     try:
       # print("chat_id----------", self.chat_id)
       result = {}
       if self.chat_id is None: return {"status_code": 400, "error": "Please send a message to bot"}
+      if image_url is None and file_id is None and file is None: return {"status_code": 400, "error": "Please pass at least one file osurce"}
+
       photo = image_url
       if not photo: photo = file_id
       if not photo: photo = file 
