@@ -20,6 +20,6 @@ rsa==4.8
 six==1.16.0
 tqdm==4.62.3
 twine==3.8.0
-urllib3==1.26.8
+urllib3==1.26.17
 webencodings==0.5.1
 zipp==3.7.0
