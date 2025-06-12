@@ -13,7 +13,7 @@ pyasn1==0.4.8
 Pygments==2.11.2
 pyparsing==3.0.7
 readme-renderer==32.0
-requests==2.27.1
+requests==2.32.4
 requests-toolbelt==0.9.1
 rfc3986==2.0.0
 rsa==4.8
