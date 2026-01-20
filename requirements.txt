@@ -9,7 +9,7 @@ keyring==23.5.0
 packaging==21.3
 pkginfo==1.8.2
 pyaes==1.6.1
-pyasn1==0.4.8
+pyasn1==0.6.2
 Pygments==2.11.2
 pyparsing==3.0.7
 readme-renderer==32.0
@@ -20,6 +20,6 @@ rsa==4.8
 six==1.16.0
 tqdm==4.62.3
 twine==3.8.0
-urllib3==1.26.8
+urllib3==2.6.3
 webencodings==0.5.1
 zipp==3.7.0
